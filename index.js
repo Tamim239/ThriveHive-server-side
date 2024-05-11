@@ -38,6 +38,11 @@ async function run() {
     // Send a ping to confirm a successful connection
        const jobsCollection = await client.db('thrivehive').collection('services')
 
+       app.get('/postJobs', async(req, res) =>{
+        const result = await jobsCollection.find().toArray()
+        res.send(result) 
+       })
+
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
