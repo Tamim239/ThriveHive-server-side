@@ -37,6 +37,7 @@ async function run() {
     // await client.connect();
     // Send a ping to confirm a successful connection
        const jobsCollection = await client.db('thrivehive').collection('services')
+       const applyCollection = await client.db('thrivehive').collection('applyList')
 
       //  all post jobs
        app.get('/postJobs', async(req, res) =>{
@@ -58,15 +59,15 @@ async function run() {
        });
 
        app.put('/postJobs/:id', async(req, res) =>{
-        const info = req.body;
-        const id = req.body.id;
-        const query = {_id: new ObjectId(id)}
-        const options = { upsert: true };
+        const id = req.params.id
+        const jobData = req.body
+        const query = { _id: new ObjectId(id) }
+        const options = { upsert: true }
         const updateDoc = {
           $set: {
-           ...info
+           ...jobData
           },
-        };
+        }
         const result = await jobsCollection.updateOne(query, updateDoc, options);
         res.send(result)
        })
@@ -78,6 +79,13 @@ async function run() {
         res.send(result)
        })
 
+      //  save apply data
+
+      app.post('/jobList', async(req, res)=>{
+        const info = req.body;
+        const result = await applyCollection.insertOne(info);
+        res.send(result)
+      })
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
