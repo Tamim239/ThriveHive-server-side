@@ -51,6 +51,13 @@ async function run() {
         const result = await jobsCollection.findOne(query);
         res.send(result)
        });
+
+       app.get('/jobEmail/:email', async(req, res) =>{
+        const email =req.params.email;
+        const query = { 'buyer.email' : email};
+        const result = await jobsCollection.find(query).toArray();
+        res.send(result)
+       })
    
        app.post('/postJobs',  async(req,res)=>{
         const jobs = req.body;
@@ -78,14 +85,33 @@ async function run() {
         const result = await jobsCollection.deleteOne(query);
         res.send(result)
        })
+      //  get data apply jobs
+   app.get('/jobList', async(req, res)=>{
+    const cursor = await applyCollection.find().toArray();
+    res.send(cursor)
+   })
+
+
+      app.get('/jobList/:email', async(req, res)=>{
+          const email = req.params.email;
+          const query = { email};
+          const result = await applyCollection.find(query).toArray();
+          res.send(result)
+      })
 
       //  save apply data
-
       app.post('/jobList', async(req, res)=>{
         const info = req.body;
         const result = await applyCollection.insertOne(info);
+        const updateDoc = {
+          $inc: { application_count: 1 },
+        }
+        const jobQuery = { _id: new ObjectId(info.jobId)}
+        const updateBidCount = await jobsCollection.updateOne(jobQuery, updateDoc)
+        console.log(updateBidCount)
         res.send(result)
-      })
+      });
+
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
