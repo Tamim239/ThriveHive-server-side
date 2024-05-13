@@ -1,7 +1,9 @@
 const express = require('express');
 const app = express();
-require('dotenv').config()
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const jwt = require('jsonwebtoken')
 const cookieParser = require('cookie-parser')
+require('dotenv').config()
 const cors = require('cors');
 const port = process.env.PORT || 5000;
 
@@ -34,7 +36,6 @@ const verifyToken = (req, res, next) => {
 }
 
 
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.uj1q2ho.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -56,19 +57,28 @@ async function run() {
 
     //  jwt
     //creating Token
-    app.post("/jwt", logger, async (req, res) => {
+    app.post("/jwt", async (req, res) => {
       const user = req.body;
-      console.log("user for token", user);
+      console.log("user for token", user);  
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET);
-      res.cookie("token", token, cookieOptions).send({ success: true });
+      res.cookie("token", token,{
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      }).send({ success: true });
     });
 
     //clearing Token
-    app.post("/logout", async (req, res) => {
+    app.get("/logout", async (req, res) => {
       const user = req.body;
       console.log("logging out", user);
       res
-        .clearCookie("token", { ...cookieOptions, maxAge: 0 })
+        .clearCookie("token", { 
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+           maxAge: 0 
+      })
         .send({ success: true });
     });
 
@@ -79,14 +89,14 @@ async function run() {
       res.send(result)
     });
 
-    app.get('/postJobs/:id', async (req, res) => {
+    app.get('/postJobs/:id', verifyToken,  async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await jobsCollection.findOne(query);
       res.send(result)
     });
 
-    app.get('/jobEmail/:email', async (req, res) => {
+    app.get('/jobEmail/:email', verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { 'buyer.email': email };
       const result = await jobsCollection.find(query).toArray();
@@ -119,12 +129,6 @@ async function run() {
       const result = await jobsCollection.deleteOne(query);
       res.send(result)
     })
-    //  get data apply jobs
-    app.get('/jobList', async (req, res) => {
-      const cursor = await applyCollection.find().toArray();
-      res.send(cursor)
-    })
-
 
     app.get('/jobList/:email', async (req, res) => {
       const email = req.params.email;
